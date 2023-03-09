@@ -1,15 +1,22 @@
 #include <gbdk/platform.h>
 #include <gb/gb.h>
+#include <rand.h>
 
 #include "ionq_logo.h"
+
+#define bool uint8_t
+#define true 1
+#define false 0
 
 // Declare functions used later in the program
 void init();
 void graphics();
 void audio();
+void interrupt(bool);
 void controls();
 
-void main() {
+void main()
+{
     // Step 1: Initialize the Game Boy
     init();
     // Step 2: Display graphics
@@ -17,13 +24,17 @@ void main() {
     // Step 3: Play audio
     audio();
     // Step 4: Check for user input
-    while (1) {
+    while (true)
+    {
         controls();
+        // Update the screen and wait for the next frame
+        wait_vbl_done();
     }
 }
 
 // Initialization function to set up the Game Boy
-void init() {
+void init()
+{
     // Turn off the display to avoid graphical artifacts during initialization
     DISPLAY_OFF;
     // Turn on the sound and set the volume to maximum for both channels
@@ -37,10 +48,11 @@ void init() {
 }
 
 // Function to display graphics on the Game Boy
-void graphics() {
+void graphics()
+{
     // Fill the background layer with a solid color
     fill_bkg_rect(0, 0, DEVICE_SCREEN_WIDTH, DEVICE_SCREEN_HEIGHT, 0);
-    // Load the native tile data for the GBDK 2020 logo
+    // Load the native tile data for the ionq logo
     set_native_tile_data(0, ionq_logo_TILE_COUNT, ionq_logo_tiles);
     // Set the tile map for the logo in the center of the screen
     set_tile_map((DEVICE_SCREEN_WIDTH - (ionq_logo_WIDTH >> 3)) >> 1,
@@ -51,7 +63,8 @@ void graphics() {
 }
 
 // Function to play audio on the Game Boy
-void audio() {
+void audio()
+{
     // Set various registers to play a tone on channel 1
     NR10_REG = 0x16; // frequency sweep settings
     NR11_REG = 0x40; // sound length and wave pattern duty
@@ -60,13 +73,39 @@ void audio() {
     NR14_REG = 0x8F; // higher 3 bits of frequency and enable channel 1
 }
 
+void interrupt(bool reset)
+{
+    if (!reset)
+    {
+        SCX_REG = rand(); // Set X offset to a random value
+        SCY_REG = rand(); // Set Y offset to a random value
+    }
+    else
+    {
+        // Reset X and Y offset
+        SCX_REG = 0;
+        SCY_REG = 0;
+    }
+}
+
 // Function to check for user input on the Game Boy
-void controls() {
-    // Check if any button is pressed
-    if (joypad()) {
-        // Play audio again if a button is pressed
+void controls()
+{
+    // Check if button is pressed
+    if (joypad() & J_A | joypad() & J_B)
+    {
+        // Play audio again
         audio();
     }
-    // Update the screen and wait for the next frame
-    wait_vbl_done();
+    // Check if joypad is pressed
+    if (joypad() & J_UP | joypad() & J_DOWN | joypad() & J_LEFT | joypad() & J_RIGHT)
+    {
+        // Use interrupts to change background
+        interrupt(false);
+    }
+    // Reset game on Start or Select
+    if (joypad() & J_START | joypad() & J_SELECT)
+    {
+        interrupt(true);
+    }
 }
