@@ -103,9 +103,10 @@ void controls()
         // Use interrupts to change background
         interrupt(false);
     }
-    // Reset game on Start or Select
+    // Check if Start or Select are pressed
     if (joypad() & J_START | joypad() & J_SELECT)
     {
+        // Reset game on Start or Select
         interrupt(true);
     }
 }

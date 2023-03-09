@@ -24,4 +24,4 @@ make gb
 
 ---
 
-![IonQ 1-bit Logo](res/ionq_logo.png)
+![IonQ 1-bit Logo](res/logo.gif)
