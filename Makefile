@@ -34,7 +34,7 @@ PROJECTNAME = logo
 # EXT?=gb # Only sets extension to default (game boy .gb) if not populated
 SRCDIR      = src
 OBJDIR      = obj/$(EXT)
-RESDIR      = res/$(TYP)
+RESDIR      = res/
 BINDIR      = build/$(EXT)
 MKDIRS      = $(OBJDIR) $(BINDIR) # See bottom of Makefile for directory auto-creation
 
