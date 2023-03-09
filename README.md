@@ -7,3 +7,7 @@ GameBoy game for IonQ Lunch-n-Learn
 ```shell
 make gb
 ```
+
+---
+
+![IonQ 2-bit Logo](res/GBDK_2020_logo.png)
