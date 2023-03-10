@@ -1,6 +1,6 @@
 # IonQ GB
 
-GameBoy game for IonQ Lunch-n-Learn
+GameBoy game for IonQ's Lunch-n-Learn
 
 ## Features
 
