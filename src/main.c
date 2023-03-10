@@ -23,7 +23,9 @@ void main()
     graphics();
     // Step 3: Play audio
     audio();
-    // Step 4: Check for user input
+    // Step 4: Reset background offsets
+    interrupt(true);
+    // Step 5: Check for user input
     while (true)
     {
         controls();
@@ -66,11 +68,11 @@ void graphics()
 void audio()
 {
     // Set various registers to play a tone on channel 1
-    NR10_REG = 0x16; // frequency sweep settings
-    NR11_REG = 0x40; // sound length and wave pattern duty
-    NR12_REG = 0x73; // envelope settings
-    NR13_REG = 0x00; // lower 8 bits of frequency
-    NR14_REG = 0x8F; // higher 3 bits of frequency and enable channel 1
+    NR10_REG = 0x16; // Frequency sweep settings
+    NR11_REG = 0x40; // Sound length and wave pattern duty
+    NR12_REG = 0x73; // Envelope settings
+    NR13_REG = 0x00; // Lower 8 bits of frequency
+    NR14_REG = 0x8F; // Higher 3 bits of frequency and enable channel 1
 }
 
 void interrupt(bool reset)

@@ -20,7 +20,7 @@ make gb
 
 - `emulator build/gb/logo.gb`
 
-- Upload [ROM](build/gb/logo.gb) to [GB Emulator](https://wasmboy.app/)
+- Upload [ROM](https://github.com/splch/ionq-gb/releases/latest/download/logo.gb) to [GB Emulator](https://wasmboy.app/)
 
 ---
 
