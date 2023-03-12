@@ -1,114 +1,90 @@
-#include <gbdk/platform.h>
-#include <gb/gb.h>
-#include <rand.h>
+#include <gb/gb.h>     // import Game Boy header file for standard I/O
+#include <stdbool.h>   // import types like boolean data type
+#include "rand.h"      // import rand function
+#include "ionq_logo.h" // import custom header file for ionq logo graphics
 
-#include "ionq_logo.h"
-
-#define bool uint8_t
-#define true 1
-#define false 0
-
-// Declare functions used later in the program
-void init();
-void graphics();
-void audio();
-void interrupt(bool);
-void controls();
+static void initializeGameBoy();   // initialize the Game Boy hardware
+static void displayLogoGraphics(); // display the IonQ logo graphics
+void playSound();                  // play sound
+void setBackgroundOffsets(bool);   // reset background offsets
+static void handleUserInput();     // handle user input controls
 
 void main()
 {
     // Step 1: Initialize the Game Boy
-    init();
+    initializeGameBoy();
     // Step 2: Display graphics
-    graphics();
+    displayLogoGraphics();
     // Step 3: Play audio
-    audio();
+    playSound();
     // Step 4: Reset background offsets
-    interrupt(true);
+    setBackgroundOffsets(true);
     // Step 5: Check for user input
     while (true)
     {
-        controls();
-        // Update the screen and wait for the next frame
+        handleUserInput();
         wait_vbl_done();
     }
 }
 
-// Initialization function to set up the Game Boy
-void init()
+static void initializeGameBoy()
 {
-    // Turn off the display to avoid graphical artifacts during initialization
-    DISPLAY_OFF;
-    // Turn on the sound and set the volume to maximum for both channels
-    NR52_REG = 0x80;
-    NR50_REG = 0x77;
-    // Enable channel 1 on both left and right speakers
-    NR51_REG = 0x11;
-    // Turn on the display and show the background layer
-    SHOW_BKG;
-    DISPLAY_ON;
+    DISPLAY_OFF;     // turn off display
+    NR52_REG = 0x80; // sound on
+    NR50_REG = 0x77; // set volume
+    NR51_REG = 0x11; // enable sound channels
+    SHOW_BKG;        // show background layer
+    DISPLAY_ON;      // turn on display
 }
 
-// Function to display graphics on the Game Boy
-void graphics()
+static void displayLogoGraphics()
 {
-    // Fill the background layer with a solid color
-    fill_bkg_rect(0, 0, DEVICE_SCREEN_WIDTH, DEVICE_SCREEN_HEIGHT, 0);
-    // Load the native tile data for the ionq logo
-    set_native_tile_data(0, ionq_logo_TILE_COUNT, ionq_logo_tiles);
-    // Set the tile map for the logo in the center of the screen
-    set_tile_map((DEVICE_SCREEN_WIDTH - (ionq_logo_WIDTH >> 3)) >> 1,
-                 (DEVICE_SCREEN_HEIGHT - (ionq_logo_HEIGHT >> 3)) >> 1,
-                 ionq_logo_WIDTH >> 3,
-                 ionq_logo_HEIGHT >> 3,
-                 ionq_logo_map);
+    fill_bkg_rect(0, 0, DEVICE_SCREEN_WIDTH, DEVICE_SCREEN_HEIGHT, 0); // fill screen with black background
+    set_native_tile_data(0, ionq_logo_TILE_COUNT, ionq_logo_tiles);    // set tile data for ionq logo
+    set_tile_map(
+        (DEVICE_SCREEN_WIDTH - (ionq_logo_WIDTH >> 3)) >> 1,   // center ionq logo horizontally
+        (DEVICE_SCREEN_HEIGHT - (ionq_logo_HEIGHT >> 3)) >> 1, // center ionq logo vertically
+        ionq_logo_WIDTH >> 3,                                  // set tile map width
+        ionq_logo_HEIGHT >> 3,                                 // set tile map height
+        ionq_logo_map);                                        // set tile map for ionq logo
 }
 
-// Function to play audio on the Game Boy
-void audio()
+void playSound()
 {
-    // Set various registers to play a tone on channel 1
-    NR10_REG = 0x16; // Frequency sweep settings
-    NR11_REG = 0x40; // Sound length and wave pattern duty
-    NR12_REG = 0x73; // Envelope settings
-    NR13_REG = 0x00; // Lower 8 bits of frequency
-    NR14_REG = 0x8F; // Higher 3 bits of frequency and enable channel 1
+    NR10_REG = 0x16; // set sweep register
+    NR11_REG = 0x40; // set sound length/wave pattern duty
+    NR12_REG = 0x73; // set envelope
+    NR13_REG = 0x00; // set frequency
+    NR14_REG = 0x8F; // set sound length and mode
 }
 
-void interrupt(bool reset)
+void setBackgroundOffsets(bool reset)
 {
     if (!reset)
     {
-        SCX_REG = rand(); // Set X offset to a random value
-        SCY_REG = rand(); // Set Y offset to a random value
+        SCX_REG = rand(); // set horizontal background offset to random number
+        SCY_REG = rand(); // set vertical background offset to random number
     }
     else
     {
-        // Reset X and Y offset
-        SCX_REG = 0;
-        SCY_REG = 0;
+        SCX_REG = 0; // set horizontal background offset to 0
+        SCY_REG = 0; // set vertical background offset to 0
     }
 }
 
-// Function to check for user input on the Game Boy
-void controls()
+static void handleUserInput() // user input controls
 {
-    // Check if button is pressed
-    if (joypad() & J_A | joypad() & J_B)
+    unsigned char input = joypad();
+    if (input & (J_A | J_B)) // if A or B button is pressed
     {
-        // Play audio again
-        audio();
+        playSound(); // play audio
     }
-    // Check if joypad is pressed
-    if (joypad() & J_UP | joypad() & J_DOWN | joypad() & J_LEFT | joypad() & J_RIGHT)
+    if (input & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) // if directional buttons are pressed
     {
-        // Use interrupts to change background
-        interrupt(false);
+        setBackgroundOffsets(false); // set background offsets to random numbers
     }
-    // Check if Start or Select are pressed
-    if (joypad() & J_START | joypad() & J_SELECT)
+    if (input & (J_START | J_SELECT)) // if menu buttons are pressed
     {
-        // Reset game on Start or Select
-        interrupt(true);
+        setBackgroundOffsets(true); // reset background offsets
     }
 }
