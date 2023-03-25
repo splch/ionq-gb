@@ -77,9 +77,29 @@ clean:
 		$(MAKE) $$target-clean; \
 	done
 
-# Include available build targets
-include Makefile.targets
+# Platform specific flags for compiling (only populate if they're both present)
+ifneq ($(strip $(PORT)),)
+ifneq ($(strip $(PLAT)),)
+CFLAGS += -m$(PORT):$(PLAT)
+endif
+endif
 
+# Called by the individual targets below to build a ROM
+build-target: $(BINS)
+
+clean-target:
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR)
+
+gb-clean:
+	${MAKE} clean-target EXT=gb
+gb:
+	${MAKE} build-target PORT=sm83 PLAT=gb EXT=gb TYP=DMG
+
+gbc-clean:
+	${MAKE} clean-target EXT=gbc
+gbc:
+	${MAKE} build-target PORT=sm83 PLAT=gb EXT=gbc TYP=CGB
 
 # create necessary directories after Makefile is parsed but before build
 # info prevents the command from being pasted into the makefile

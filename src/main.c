@@ -1,6 +1,5 @@
 #include <gb/gb.h>     // import Game Boy header file for standard I/O
 #include <stdbool.h>   // import types like boolean data type
-#include "rand.h"      // import rand function
 #include "ionq_logo.h" // import custom header file for ionq logo graphics
 
 static void initializeGameBoy();   // initialize the Game Boy hardware
@@ -8,6 +7,7 @@ static void displayLogoGraphics(); // display the IonQ logo graphics
 void playSound();                  // play sound
 void setBackgroundOffsets(bool);   // reset background offsets
 static void handleUserInput();     // handle user input controls
+static char rand(short);           // use assembly-optimized rand
 
 void main()
 {
@@ -62,8 +62,8 @@ void setBackgroundOffsets(bool reset)
 {
     if (!reset)
     {
-        SCX_REG = rand(); // set horizontal background offset to random number
-        SCY_REG = rand(); // set vertical background offset to random number
+        SCX_REG = rand(DIV_REG); // set horizontal background offset to random number
+        SCY_REG = rand(SCX_REG); // set vertical background offset to random number
     }
     else
     {
@@ -72,19 +72,13 @@ void setBackgroundOffsets(bool reset)
     }
 }
 
-static void handleUserInput() // user input controls
+static void handleUserInput()
 {
     unsigned char input = joypad();
-    if (input & (J_A | J_B)) // if A or B button is pressed
-    {
-        playSound(); // play audio
-    }
+    if (input & (J_A | J_B))                        // if A or B button is pressed
+        playSound();                                // play audio
     if (input & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) // if directional buttons are pressed
-    {
-        setBackgroundOffsets(false); // set background offsets to random numbers
-    }
-    if (input & (J_START | J_SELECT)) // if menu buttons are pressed
-    {
-        setBackgroundOffsets(true); // reset background offsets
-    }
+        setBackgroundOffsets(false);                // set background offsets to random numbers
+    if (input & (J_START | J_SELECT))               // if menu buttons are pressed
+        setBackgroundOffsets(true);                 // reset background offsets
 }
