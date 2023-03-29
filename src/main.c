@@ -1,40 +1,54 @@
 #include <gb/gb.h>     // import Game Boy header file for standard I/O
+#include <stdio.h>     // printf function
+#include <stdlib.h>    // to dyamically allocate arrays
 #include <stdbool.h>   // import types like boolean data type
 #include "ionq_logo.h" // import custom header file for ionq logo graphics
+#include "sprite.h"    // import sprite data
 
 static void initializeGameBoy();   // initialize the Game Boy hardware
 static void displayLogoGraphics(); // display the IonQ logo graphics
 void playSound();                  // play sound
+void spawnSprite();                // creates a sprite
 void setBackgroundOffsets(bool);   // reset background offsets
 static void handleUserInput();     // handle user input controls
 static char rand(short);           // use assembly-optimized rand
 
+unsigned int *spritePositions; // store sprite locations
+unsigned int spriteCount;      // keep track of current sprite count
+
 void main()
 {
-    // Step 1: Initialize the Game Boy
+    // step 1: initialize the Game Boy
     initializeGameBoy();
-    // Step 2: Display graphics
+    // step 2: display graphics
     displayLogoGraphics();
-    // Step 3: Play audio
+    // step 3: play audio
     playSound();
-    // Step 4: Reset background offsets
+    // step 4: reset background offsets
     setBackgroundOffsets(true);
-    // Step 5: Check for user input
+    // step 5: check for user input
     while (true)
     {
         handleUserInput();
         wait_vbl_done();
     }
+
+    // free memory allocated for array before the program exits
+    free(spritePositions);
 }
 
 static void initializeGameBoy()
 {
-    DISPLAY_OFF;     // turn off display
-    NR52_REG = 0x80; // sound on
-    NR50_REG = 0x77; // set volume
-    NR51_REG = 0x11; // enable sound channels
-    SHOW_BKG;        // show background layer
-    DISPLAY_ON;      // turn on display
+    DISPLAY_OFF;                   // turn off display
+    NR52_REG = 0x80;               // sound on
+    NR50_REG = 0x77;               // set volume
+    NR51_REG = 0x11;               // enable sound channels
+    SPRITES_8x8;                   // set sprite size to 8x8
+    set_sprite_data(0, 1, sprite); // load sprite data into VRAM
+    spriteCount = 0;               // set the number of sprites
+    SHOW_SPRITES;                  // show sprite layer
+    SHOW_BKG;                      // show background layer
+    DISPLAY_ON;                    // turn on display
 }
 
 static void displayLogoGraphics()
@@ -58,6 +72,44 @@ void playSound()
     NR14_REG = 0x8F; // set sound length and mode
 }
 
+void spawnSprite()
+{
+    move_sprite(spriteCount, SPRITE_CENTER_X, SPRITE_CENTER_Y); // move sprite to the center of the screen
+
+    // update spritePositions array
+    spritePositions = realloc(spritePositions, 2 * (spriteCount + 1) * sizeof(int));
+    spritePositions[2 * spriteCount] = SPRITE_CENTER_X;
+    spritePositions[2 * spriteCount + 1] = SPRITE_CENTER_Y;
+
+    spriteCount++; // increment sprite count
+    if (spriteCount > 40)
+        spriteCount = 0;
+}
+
+void moveSprites(unsigned char input)
+{
+    int dx = 0;
+    int dy = 0;
+    if (input & J_UP)
+        dy = -8;
+    if (input & J_DOWN)
+        dy = 8;
+    if (input & J_LEFT)
+        dx = -8;
+    if (input & J_RIGHT)
+        dx = 8;
+    for (unsigned int i = 0; i < spriteCount; i++)
+    {
+        int newX = spritePositions[2 * i] + dx;
+        int newY = spritePositions[2 * i + 1] + dy;
+
+        spritePositions[2 * i] = newX;
+        spritePositions[2 * i + 1] = newY;
+
+        move_sprite(i, newX, newY);
+    }
+}
+
 void setBackgroundOffsets(bool reset)
 {
     if (!reset)
@@ -75,10 +127,15 @@ void setBackgroundOffsets(bool reset)
 static void handleUserInput()
 {
     unsigned char input = joypad();
-    if (input & (J_A | J_B))                        // if A or B button is pressed
+    if (input & J_A)                                // if A button is pressed
         playSound();                                // play audio
-    if (input & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) // if directional buttons are pressed
+    if (input & J_B)                                // if B button is pressed
         setBackgroundOffsets(false);                // set background offsets to random numbers
     if (input & (J_START | J_SELECT))               // if menu buttons are pressed
         setBackgroundOffsets(true);                 // reset background offsets
+    if (input & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) // if directional buttons are pressed
+    {
+        moveSprites(input); // move all sprites in the direction
+        spawnSprite();      // generate a sprite
+    }
 }
