@@ -5,16 +5,19 @@
 #include "ionq_logo.h" // import custom header file for ionq logo graphics
 #include "sprite.h"    // import sprite data
 
-static void initializeGameBoy();   // initialize the Game Boy hardware
-static void displayLogoGraphics(); // display the IonQ logo graphics
-void playSound();                  // play sound
-void spawnSprite();                // creates a sprite
-void setBackgroundOffsets(bool);   // reset background offsets
-static void handleUserInput();     // handle user input controls
-static char rand(short);           // use assembly-optimized rand
+static void initializeGameBoy();          // initialize the Game Boy hardware
+static void displayLogoGraphics();        // display the IonQ logo graphics
+void playSound();                         // play sound
+void spawnSprite();                       // creates a sprite
+static void flickerSprites(unsigned int); // avoid the 10 sprite per line limit
+void moveSprites(unsigned char);          // moves all sprites by d-pad
+void setBackgroundOffsets(bool);          // reset background offsets
+static void handleUserInput();            // handle user input controls
+extern char rand(short);                  // use assembly-optimized rand
 
 unsigned int *spritePositions; // store sprite locations
 unsigned int spriteCount;      // keep track of current sprite count
+unsigned int currentFrame;     // used to alternate sprite visibility
 
 void main()
 {
@@ -30,6 +33,7 @@ void main()
     while (true)
     {
         handleUserInput();
+        flickerSprites(currentFrame++);
         wait_vbl_done();
     }
 
@@ -74,16 +78,35 @@ void playSound()
 
 void spawnSprite()
 {
-    move_sprite(spriteCount, SPRITE_CENTER_X, SPRITE_CENTER_Y); // move sprite to the center of the screen
+    // Set sprite tile and make it initially invisible
+    set_sprite_tile(spriteCount, 0);
+    set_sprite_prop(spriteCount, get_sprite_prop(spriteCount) & ~S_PRIORITY);
 
-    // update spritePositions array
+    // Move the sprite to the center of the screen
+    move_sprite(spriteCount, SPRITE_CENTER_X, SPRITE_CENTER_Y);
+
+    // Update spritePositions array
     spritePositions = realloc(spritePositions, 2 * (spriteCount + 1) * sizeof(int));
     spritePositions[2 * spriteCount] = SPRITE_CENTER_X;
     spritePositions[2 * spriteCount + 1] = SPRITE_CENTER_Y;
 
-    spriteCount++; // increment sprite count
-    if (spriteCount > 40)
+    spriteCount++; // Increment sprite count
+    if (spriteCount > MAX_HARDWARE_SPRITES)
         spriteCount = 0;
+}
+
+void flickerSprites(unsigned int frame)
+{
+    unsigned int startSprite = frame % 2 == 0 ? 0 : MAX_HARDWARE_SPRITES;
+
+    for (unsigned int i = 0; i < MAX_HARDWARE_SPRITES; i++)
+    {
+        int index = (startSprite + i) % spriteCount;
+        int x = spritePositions[2 * index];
+        int y = spritePositions[2 * index + 1];
+
+        move_sprite(i, x, y);
+    }
 }
 
 void moveSprites(unsigned char input)
@@ -98,14 +121,12 @@ void moveSprites(unsigned char input)
         dx = -8;
     if (input & J_RIGHT)
         dx = 8;
-    for (unsigned int i = 0; i < spriteCount; i++)
+    for (unsigned int i = 0; i < 40; i++)
     {
         int newX = spritePositions[2 * i] + dx;
         int newY = spritePositions[2 * i + 1] + dy;
-
         spritePositions[2 * i] = newX;
         spritePositions[2 * i + 1] = newY;
-
         move_sprite(i, newX, newY);
     }
 }
